@@ -11,6 +11,12 @@
 
 **A production-grade, highly scalable cloud IDE featuring real-time peer collaboration, secure sandboxed code execution, and autonomous AI-assisted software engineering.**
 
+<br/>
+
+<img src="./CodeForge-PPT/img/hero.png" alt="CodeForge Collaborative Editor Interface" width="900" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); margin: 20px 0;"/>
+
+<br/>
+
 [Explore Architecture](#-architecture) • [Monorepo Layout](#-monorepo-structure) • [Tech Stack](#-tech-stack) • [Quick Start](#-quick-start) • [Security Model](#-security)
 
 </div>
@@ -20,6 +26,10 @@
 ## 🏗️ Architecture
 
 CodeForge utilizes a distributed, event-driven microservices architecture built around a high-performance monorepo. Real-time collaboration is powered by custom Yjs CRDT synchronization over WebSockets, while code execution is isolated within sandboxed Docker runtimes orchestrated dynamically.
+
+<div align="center">
+  <img src="./CodeForge-PPT/img/architecture.png" alt="CodeForge Architecture Mesh Diagram" width="850" style="border-radius: 8px; margin: 20px 0;"/>
+</div>
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -95,6 +105,10 @@ codeforge/
 * **Cursor Compression**: Employs structural mapping keys to compress cursor updates by ~70%, decreasing network overhead.
 * **Event Replay**: Records sequential document logs to offer timeline scrubbing and playback features.
 
+<div align="center">
+  <img src="./CodeForge-PPT/img/collab.png" alt="Collaborative synchronization sequence" width="750" style="border-radius: 8px; margin: 15px 0;"/>
+</div>
+
 ### 🗄️ Distributed Collaborative Filesystem (`@codeforge/distributed-fs`)
 * **Conflict-Free Tree Merges**: Computes non-overlapping file additions, edits, and deletions dynamically.
 * **FS Snapshot Persistence**: Saves filesystem states to Redis with automated version history tracking.
@@ -105,13 +119,13 @@ codeforge/
 * **Process Safeguards**: Blocks host network access, locks down root capabilities, caps PID pools, and sets strict RAM/CPU ceilings.
 * **Intelligent Threat Auditing**: Screens input code strings for malicious patterns (e.g. fork bombs, disk fill scripts) prior to dispatching.
 
-### 🩺 Observability Mesh (`@codeforge/observability`)
-* **Metrics Telemetry**: Scrapes metrics using Prometheus targets monitoring active rooms, worker loads, and execution times.
-* **OpenTelemetry Spans**: Traces WebSocket requests, API calls, and BullMQ task queues to debug service latencies.
-
 ---
 
 ## 🔒 Security Architecture
+
+<div align="center">
+  <img src="./CodeForge-PPT/img/security.png" alt="CodeForge Sandbox Isolation Boundaries" width="800" style="border-radius: 8px; margin: 20px 0;"/>
+</div>
 
 | Layer | Component | Security Protections Implemented |
 |---|---|---|
@@ -124,6 +138,10 @@ codeforge/
 ---
 
 ## 🛠️ Tech Stack
+
+<div align="center">
+  <img src="./CodeForge-PPT/img/techstack.png" alt="CodeForge Full Tech Stack Map" width="800" style="border-radius: 8px; margin: 20px 0;"/>
+</div>
 
 * **Frontend Framework**: Next.js 15 (App Router), React, Tailwind CSS, Framer Motion
 * **Text Editing**: Monaco Editor with custom Yjs bindings (`y-monaco`)
