@@ -1,0 +1,374 @@
+// ============================================
+// CodeForge — Complete Database Schema
+// ============================================
+// All 14 models with relations, indexes, and enums
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ───────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum WorkspaceRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  TIMEOUT
+  CANCELLED
+}
+
+enum ExecutionLanguage {
+  PYTHON
+  JAVASCRIPT
+  TYPESCRIPT
+  CPP
+  C
+  JAVA
+  GO
+  RUST
+  RUBY
+  PHP
+  PERL
+  R
+  DART
+  KOTLIN
+  SWIFT
+  POWERSHELL
+  BASH
+  LUA
+  SCALA
+  CSHARP
+}
+
+enum AiAnalysisType {
+  EXPLAIN
+  DEBUG
+  OPTIMIZE
+  VULNERABILITY
+  COMPLEXITY
+  REFACTOR
+  SUMMARIZE
+  ARCHITECTURE
+  DEADLOCK
+  MEMORY
+}
+
+enum AiRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  WORKSPACE_INVITE
+  EXECUTION_COMPLETE
+  AI_COMPLETE
+  SYSTEM
+}
+
+// ── Users ───────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String   // bcrypt hashed
+  role      UserRole @default(USER)
+  avatarUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  ownedWorkspaces    Workspace[]         @relation("WorkspaceOwner")
+  memberships        WorkspaceMember[]
+  executionJobs      ExecutionJob[]
+  aiRequests         AiRequest[]
+  refreshTokens      RefreshToken[]
+  chatMessages       ChatMessage[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+// ── Refresh Tokens ──────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ── Workspaces ──────────────────────────────────
+
+model Workspace {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  language    String  @default("javascript")
+  isPublic    Boolean @default(false)
+  ownerId     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  owner    User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members  WorkspaceMember[]
+  files    File[]
+  folders  Folder[]
+  sessions CollaborativeSession[]
+  jobs     ExecutionJob[]
+  aiReqs   AiRequest[]
+  messages ChatMessage[]
+
+  @@index([ownerId])
+  @@index([name])
+  @@map("workspaces")
+}
+
+// ── Workspace Members (RBAC) ────────────────────
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        WorkspaceRole @default(EDITOR)
+
+  joinedAt DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+  @@map("workspace_members")
+}
+
+// ── Folders ─────────────────────────────────────
+
+model Folder {
+  id          String  @id @default(cuid())
+  name        String
+  path        String
+  workspaceId String
+  parentId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children  Folder[]  @relation("FolderHierarchy")
+  files     File[]
+
+  @@unique([workspaceId, path])
+  @@index([workspaceId])
+  @@index([parentId])
+  @@map("folders")
+}
+
+// ── Files ───────────────────────────────────────
+
+model File {
+  id          String  @id @default(cuid())
+  name        String
+  path        String
+  content     String  @default("")
+  language    String?
+  workspaceId String
+  folderId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, path])
+  @@index([workspaceId])
+  @@index([folderId])
+  @@map("files")
+}
+
+// ── Collaborative Sessions ──────────────────────
+
+model CollaborativeSession {
+  id          String   @id @default(cuid())
+  workspaceId String
+  activeUsers Int      @default(0)
+  yjsState   Bytes?   // Serialized Yjs document state
+
+  startedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId])
+  @@map("collaborative_sessions")
+}
+
+// ── Execution Jobs ──────────────────────────────
+
+model ExecutionJob {
+  id          String            @id @default(cuid())
+  workspaceId String
+  userId      String
+  language    ExecutionLanguage
+  code        String
+  stdin       String?
+  status      ExecutionStatus   @default(PENDING)
+  output      String?
+  error       String?
+  exitCode    Int?
+  executionMs Int?              // Execution time in ms
+  memoryBytes Int?              // Peak memory in bytes
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs      ExecutionLog[]
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("execution_jobs")
+}
+
+// ── Execution Logs ──────────────────────────────
+
+model ExecutionLog {
+  id    String @id @default(cuid())
+  jobId String
+  line  String
+  isErr Boolean @default(false)
+
+  timestamp DateTime @default(now())
+
+  job ExecutionJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("execution_logs")
+}
+
+// ── AI Requests ─────────────────────────────────
+
+model AiRequest {
+  id          String          @id @default(cuid())
+  userId      String
+  workspaceId String
+  type        AiAnalysisType
+  code        String
+  language    String
+  status      AiRequestStatus @default(PENDING)
+  result      String?
+  tokensUsed  Int?
+  model       String?
+  cost        Float?          // Cost in USD
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ai_requests")
+}
+
+// ── Chat Messages ───────────────────────────────
+
+model ChatMessage {
+  id          String @id @default(cuid())
+  workspaceId String
+  userId      String
+  content     String
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("chat_messages")
+}
+
+// ── Notifications ───────────────────────────────
+
+model Notification {
+  id       String           @id @default(cuid())
+  userId   String
+  type     NotificationType
+  title    String
+  message  String
+  read     Boolean          @default(false)
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ── Audit Logs ──────────────────────────────────
+
+model AuditLog {
+  id       String @id @default(cuid())
+  userId   String?
+  action   String
+  resource String
+  resourceId String?
+  metadata Json?
+  ip       String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

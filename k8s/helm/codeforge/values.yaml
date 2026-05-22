@@ -1,0 +1,172 @@
+# CodeForge Helm Values — Default Configuration
+# Override per environment: values-dev.yaml, values-prod.yaml
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# ── API Gateway ─────────────────────────────────
+apiGateway:
+  replicaCount: 2
+  image:
+    repository: codeforge/api-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 4000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  env:
+    NODE_ENV: production
+    PORT: "4000"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+
+# ── Web Frontend ────────────────────────────────
+web:
+  replicaCount: 2
+  image:
+    repository: codeforge/web
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ── Execution Workers ───────────────────────────
+executionWorker:
+  replicaCount: 3
+  image:
+    repository: codeforge/execution-worker
+    tag: latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  env:
+    MAX_CONCURRENT_EXECUTIONS: "5"
+    EXECUTION_TIMEOUT: "30000"
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilization: 60
+  # Pod disruption budget
+  pdb:
+    minAvailable: 1
+
+# ── Execution Orchestrator ──────────────────────
+executionOrchestrator:
+  replicaCount: 1
+  image:
+    repository: codeforge/execution-orchestrator
+    tag: latest
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# ── AI Worker ───────────────────────────────────
+aiWorker:
+  replicaCount: 2
+  image:
+    repository: codeforge/ai-worker
+    tag: latest
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+# ── Security Service ───────────────────────────
+securityService:
+  replicaCount: 1
+  image:
+    repository: codeforge/security-service
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# ── Ingress ─────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "api-gateway"
+  hosts:
+    - host: codeforge.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+        - path: /api
+          pathType: Prefix
+          service: api-gateway
+        - path: /socket.io
+          pathType: Prefix
+          service: api-gateway
+  tls:
+    - secretName: codeforge-tls
+      hosts:
+        - codeforge.example.com
+
+# ── Redis ───────────────────────────────────────
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    password: "codeforge-redis-secret"
+  replica:
+    replicaCount: 2
+  master:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+# ── PostgreSQL ──────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    username: codeforge
+    password: "codeforge-db-secret"
+    database: codeforge
+  primary:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# ── Monitoring ──────────────────────────────────
+monitoring:
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+    adminPassword: "admin"

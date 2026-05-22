@@ -1,0 +1,35 @@
+{
+  "name": "codeforge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-Powered Realtime Collaborative Cloud IDE with Secure Distributed Code Execution",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "cd apps/api-gateway && npx prisma generate",
+    "db:migrate": "cd apps/api-gateway && npx prisma migrate dev",
+    "db:push": "cd apps/api-gateway && npx prisma db push",
+    "db:seed": "cd apps/api-gateway && npx prisma db seed",
+    "docker:dev": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up -d",
+    "clean": "turbo run clean && rimraf node_modules"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "rimraf": "^6.0.0",
+    "turbo": "^2.9.14",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.9.0"
+}

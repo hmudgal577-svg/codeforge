@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+# Security: non-root user
+RUN adduser -D -u 65534 runner
+
+# Read-only filesystem support
+RUN mkdir -p /tmp/work && chown runner:runner /tmp/work
+
+# Remove unnecessary tools
+RUN rm -rf /usr/bin/wget /usr/bin/curl 2>/dev/null || true
+RUN npm cache clean --force
+
+USER runner
+WORKDIR /code
+
+ENV NODE_OPTIONS="--max-old-space-size=128"
+
+ENTRYPOINT ["node"]
+CMD ["/code/main.js"]

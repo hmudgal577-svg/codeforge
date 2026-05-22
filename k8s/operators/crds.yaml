@@ -1,0 +1,149 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: codeforgeruntimes.codeforge.io
+spec:
+  group: codeforge.io
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                language:
+                  type: string
+                  enum: [python, javascript, cpp, java]
+                version:
+                  type: string
+                replicas:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                resources:
+                  type: object
+                  properties:
+                    memoryMB:
+                      type: integer
+                      default: 128
+                    cpuMillis:
+                      type: integer
+                      default: 500
+                    timeoutSeconds:
+                      type: integer
+                      default: 30
+                isolation:
+                  type: object
+                  properties:
+                    seccomp:
+                      type: boolean
+                      default: true
+                    networkPolicy:
+                      type: string
+                      enum: [none, restricted, full]
+                      default: none
+                    readOnlyFS:
+                      type: boolean
+                      default: true
+                autoScaling:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    minReplicas:
+                      type: integer
+                      default: 1
+                    maxReplicas:
+                      type: integer
+                      default: 20
+                    targetQueueDepth:
+                      type: integer
+                      default: 10
+            status:
+              type: object
+              properties:
+                readyReplicas:
+                  type: integer
+                activeExecutions:
+                  type: integer
+                healthScore:
+                  type: integer
+                lastScaleEvent:
+                  type: string
+      additionalPrinterColumns:
+        - name: Language
+          type: string
+          jsonPath: .spec.language
+        - name: Replicas
+          type: integer
+          jsonPath: .spec.replicas
+        - name: Ready
+          type: integer
+          jsonPath: .status.readyReplicas
+        - name: Health
+          type: integer
+          jsonPath: .status.healthScore
+  scope: Namespaced
+  names:
+    plural: codeforgeruntimes
+    singular: codeforgeruntime
+    kind: CodeForgeRuntime
+    shortNames:
+      - cfrt
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: executionworkers.codeforge.io
+spec:
+  group: codeforge.io
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                region:
+                  type: string
+                capabilities:
+                  type: array
+                  items:
+                    type: string
+                maxConcurrency:
+                  type: integer
+                  default: 5
+                healthCheckInterval:
+                  type: integer
+                  default: 10
+                autoRestart:
+                  type: boolean
+                  default: true
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum: [Pending, Running, Draining, Failed]
+                healthScore:
+                  type: integer
+                activeJobs:
+                  type: integer
+                totalExecutions:
+                  type: integer
+  scope: Namespaced
+  names:
+    plural: executionworkers
+    singular: executionworker
+    kind: ExecutionWorker
+    shortNames:
+      - ew

@@ -1,0 +1,8 @@
+{
+  "name": "@codeforge/security-service",
+  "version": "1.0.0",
+  "description": "Distributed security intelligence layer",
+  "scripts": { "dev": "ts-node src/main.ts", "build": "tsc" },
+  "dependencies": { "ioredis": "^5.3.2" },
+  "devDependencies": { "typescript": "^5.7.0", "ts-node": "^10.9.0", "@types/node": "^22.0.0" }
+}

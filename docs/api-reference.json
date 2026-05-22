@@ -1,0 +1,53 @@
+{
+  "apiUrl": "http://localhost:4000/api/v1",
+  "wsUrl": "http://localhost:4000",
+  "endpoints": {
+    "auth": {
+      "register": { "method": "POST", "path": "/auth/register", "body": { "email": "string", "username": "string", "password": "string" } },
+      "login": { "method": "POST", "path": "/auth/login", "body": { "email": "string", "password": "string" } },
+      "refresh": { "method": "POST", "path": "/auth/refresh", "body": { "refreshToken": "string?" } },
+      "logout": { "method": "POST", "path": "/auth/logout", "auth": true },
+      "me": { "method": "GET", "path": "/auth/me", "auth": true }
+    },
+    "workspaces": {
+      "list": { "method": "GET", "path": "/workspaces", "auth": true },
+      "create": { "method": "POST", "path": "/workspaces", "auth": true, "body": { "name": "string", "language": "string", "description": "string?" } },
+      "get": { "method": "GET", "path": "/workspaces/:id", "auth": true },
+      "createFile": { "method": "POST", "path": "/workspaces/:id/files", "auth": true },
+      "updateFile": { "method": "PUT", "path": "/workspaces/:id/files/:fileId", "auth": true },
+      "deleteFile": { "method": "DELETE", "path": "/workspaces/:id/files/:fileId", "auth": true },
+      "addMember": { "method": "POST", "path": "/workspaces/:id/members", "auth": true }
+    },
+    "execution": {
+      "submit": { "method": "POST", "path": "/execution", "auth": true, "body": { "workspaceId": "string", "language": "string", "code": "string", "stdin": "string?" } },
+      "result": { "method": "GET", "path": "/execution/:jobId", "auth": true },
+      "list": { "method": "GET", "path": "/execution/workspace/:workspaceId", "auth": true }
+    },
+    "ai": {
+      "analyze": { "method": "POST", "path": "/ai/analyze", "auth": true, "body": { "workspaceId": "string", "type": "EXPLAIN|DEBUG|OPTIMIZE|VULNERABILITY|COMPLEXITY|REFACTOR", "code": "string", "language": "string" } },
+      "result": { "method": "GET", "path": "/ai/result/:requestId", "auth": true }
+    },
+    "admin": {
+      "metrics": { "method": "GET", "path": "/admin/metrics", "auth": true, "role": "ADMIN" },
+      "auditLogs": { "method": "GET", "path": "/admin/audit-logs", "auth": true, "role": "ADMIN" },
+      "executionStats": { "method": "GET", "path": "/admin/execution-stats", "auth": true, "role": "ADMIN" },
+      "userGrowth": { "method": "GET", "path": "/admin/user-growth", "auth": true, "role": "ADMIN" }
+    },
+    "health": {
+      "check": { "method": "GET", "path": "/health" }
+    }
+  },
+  "websocketEvents": {
+    "clientToServer": [
+      "workspace:join", "workspace:leave",
+      "doc:update", "doc:awareness",
+      "cursor:update", "chat:message", "file:change"
+    ],
+    "serverToClient": [
+      "workspace:users", "user:joined", "user:left",
+      "doc:update", "doc:awareness", "cursor:update",
+      "chat:message", "exec:output", "exec:complete",
+      "ai:stream", "ai:complete"
+    ]
+  }
+}

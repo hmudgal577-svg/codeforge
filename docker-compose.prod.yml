@@ -1,0 +1,179 @@
+# ============================================
+# Production Docker Compose — Full Stack
+# ============================================
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: codeforge-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - web
+      - api-gateway
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    container_name: codeforge-web
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api-gateway:4000/api/v1
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway/Dockerfile
+    container_name: codeforge-api
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: codeforge-postgres
+    environment:
+      POSTGRES_USER: codeforge
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-codeforge_secret}
+      POSTGRES_DB: codeforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codeforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: codeforge-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: codeforge-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: codeforge
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-codeforge_secret}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── Language Runtime Images ──────────────────────
+  # Build with: docker compose -f docker-compose.prod.yml --profile runtimes build
+  runtime-python:
+    build: { context: ./docker/runtimes/python }
+    image: codeforge-runtime-python
+    profiles: [runtimes]
+
+  runtime-node:
+    build: { context: ./docker/runtimes/node }
+    image: codeforge-runtime-node
+    profiles: [runtimes]
+
+  runtime-cpp:
+    build: { context: ./docker/runtimes/cpp }
+    image: codeforge-runtime-cpp
+    profiles: [runtimes]
+
+  runtime-java:
+    build: { context: ./docker/runtimes/java }
+    image: codeforge-runtime-java
+    profiles: [runtimes]
+
+  runtime-go:
+    build: { context: ./docker/runtimes/go }
+    image: codeforge-runtime-go
+    profiles: [runtimes]
+
+  runtime-rust:
+    build: { context: ./docker/runtimes/rust }
+    image: codeforge-runtime-rust
+    profiles: [runtimes]
+
+  runtime-ruby:
+    build: { context: ./docker/runtimes/ruby }
+    image: codeforge-runtime-ruby
+    profiles: [runtimes]
+
+  runtime-php:
+    build: { context: ./docker/runtimes/php }
+    image: codeforge-runtime-php
+    profiles: [runtimes]
+
+  runtime-perl:
+    build: { context: ./docker/runtimes/perl }
+    image: codeforge-runtime-perl
+    profiles: [runtimes]
+
+  runtime-r:
+    build: { context: ./docker/runtimes/r }
+    image: codeforge-runtime-r
+    profiles: [runtimes]
+
+  runtime-dart:
+    build: { context: ./docker/runtimes/dart }
+    image: codeforge-runtime-dart
+    profiles: [runtimes]
+
+  runtime-kotlin:
+    build: { context: ./docker/runtimes/kotlin }
+    image: codeforge-runtime-kotlin
+    profiles: [runtimes]
+
+  runtime-swift:
+    build: { context: ./docker/runtimes/swift }
+    image: codeforge-runtime-swift
+    profiles: [runtimes]
+
+  runtime-scala:
+    build: { context: ./docker/runtimes/scala }
+    image: codeforge-runtime-scala
+    profiles: [runtimes]
+
+  runtime-csharp:
+    build: { context: ./docker/runtimes/csharp }
+    image: codeforge-runtime-dotnet
+    profiles: [runtimes]
+
+  runtime-lua:
+    build: { context: ./docker/runtimes/lua }
+    image: codeforge-runtime-lua
+    profiles: [runtimes]
+
+  runtime-bash:
+    build: { context: ./docker/runtimes/bash }
+    image: codeforge-runtime-bash
+    profiles: [runtimes]
+
+  runtime-powershell:
+    build: { context: ./docker/runtimes/powershell }
+    image: codeforge-runtime-pwsh
+    profiles: [runtimes]
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

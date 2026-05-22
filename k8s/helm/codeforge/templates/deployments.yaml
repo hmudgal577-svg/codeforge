@@ -1,0 +1,88 @@
+{{- range $name, $svc := dict "api-gateway" .Values.apiGateway "web" .Values.web "execution-worker" .Values.executionWorker "execution-orchestrator" .Values.executionOrchestrator "ai-worker" .Values.aiWorker "security-service" .Values.securityService }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: codeforge
+    component: {{ $name }}
+spec:
+  replicas: {{ $svc.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app: codeforge
+      component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: codeforge
+        component: {{ $name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ ($svc.service).port | default 3000 }}"
+    spec:
+      containers:
+        - name: {{ $name }}
+          image: "{{ ($svc.image).repository }}:{{ ($svc.image).tag | default \"latest\" }}"
+          imagePullPolicy: {{ ($svc.image).pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: {{ ($svc.service).port | default 3000 }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: codeforge-config
+            - secretRef:
+                name: codeforge-secrets
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: {{ ($svc.service).port | default 3000 }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: {{ ($svc.service).port | default 3000 }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  selector:
+    app: codeforge
+    component: {{ $name }}
+  ports:
+    - port: {{ ($svc.service).port | default 3000 }}
+      targetPort: {{ ($svc.service).port | default 3000 }}
+  type: {{ ($svc.service).type | default "ClusterIP" }}
+{{- if and $svc.autoscaling $svc.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $name }}
+  minReplicas: {{ $svc.autoscaling.minReplicas | default 1 }}
+  maxReplicas: {{ $svc.autoscaling.maxReplicas | default 5 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $svc.autoscaling.targetCPUUtilization | default 70 }}
+{{- end }}
+{{- end }}

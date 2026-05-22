@@ -1,0 +1,25 @@
+FROM python:3.12-alpine
+
+# Security: non-root user
+RUN adduser -D -u 65534 runner
+
+# Minimal dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir numpy pandas
+
+# Read-only filesystem support
+RUN mkdir -p /tmp/work && chown runner:runner /tmp/work
+
+# Remove unnecessary tools
+RUN rm -rf /usr/bin/wget /usr/bin/curl 2>/dev/null || true
+
+USER runner
+WORKDIR /code
+
+# Resource limits via environment
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHON_RECURSION_LIMIT=500
+
+ENTRYPOINT ["python3"]
+CMD ["/code/main.py"]

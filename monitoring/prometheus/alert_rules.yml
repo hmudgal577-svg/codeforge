@@ -1,0 +1,68 @@
+groups:
+  - name: codeforge_alerts
+    rules:
+      - alert: HighExecutionFailureRate
+        expr: rate(codeforge_executions_total{status="failed"}[5m]) / rate(codeforge_executions_total[5m]) > 0.3
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High execution failure rate (>30%)"
+          description: "{{ $labels.language }} execution failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: WorkerDead
+        expr: codeforge_worker_health_score < 10
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Worker {{ $labels.worker_id }} is dead"
+          description: "Health score dropped to {{ $value }}"
+
+      - alert: HighExecutionLatency
+        expr: histogram_quantile(0.95, rate(codeforge_execution_duration_ms_bucket[5m])) > 15000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 execution latency > 15s"
+
+      - alert: QueueBacklog
+        expr: codeforge_execution_queue_depth > 100
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Execution queue backlog > 100 jobs"
+
+      - alert: HighMemoryUsage
+        expr: codeforge_worker_memory_bytes / (1024*1024*1024) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Worker {{ $labels.worker_id }} memory > 3GB"
+
+      - alert: WebSocketConnectionDrop
+        expr: delta(codeforge_ws_connections[5m]) < -50
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sudden WebSocket connection drop (>50 in 5m)"
+
+      - alert: AIServiceDown
+        expr: rate(codeforge_ai_analyses_total{status="failed"}[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI analysis failure rate > 50%"
+
+      - alert: SecurityThreatDetected
+        expr: rate(codeforge_security_events_total{severity="critical"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical security event detected"

@@ -1,0 +1,10 @@
+{
+  "name": "@codeforge/distributed-fs",
+  "version": "1.0.0",
+  "description": "Distributed realtime filesystem with CRDT sync",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": { "build": "tsc", "dev": "tsc --watch" },
+  "dependencies": { "ioredis": "^5.3.2" },
+  "devDependencies": { "typescript": "^5.7.0", "@types/node": "^22.0.0" }
+}
